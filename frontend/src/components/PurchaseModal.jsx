@@ -125,8 +125,8 @@ const PurchaseModal = ({ product, onClose }) => {
                                 key={method}
                                 onClick={() => setPaymentMethod(method)}
                                 className={`py-3 rounded-xl border font-bold text-sm transition-all ${paymentMethod === method
-                                        ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/20'
-                                        : 'bg-[#13151f] border-gray-700 text-gray-400 hover:bg-gray-800'
+                                    ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/20'
+                                    : 'bg-[#13151f] border-gray-700 text-gray-400 hover:bg-gray-800'
                                     }`}
                             >
                                 {method}

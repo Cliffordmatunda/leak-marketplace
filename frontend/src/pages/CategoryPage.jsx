@@ -67,8 +67,8 @@ const CategoryPage = () => {
                                 key={sub.id}
                                 onClick={() => setSearchParams({ sub: sub.id })}
                                 className={`w-full flex items-center justify-between px-3 py-3 rounded-lg text-sm transition-all duration-200 group ${isActive
-                                        ? 'bg-[#1c1f2e] text-white border border-gray-700'
-                                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                                    ? 'bg-[#1c1f2e] text-white border border-gray-700'
+                                    : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
