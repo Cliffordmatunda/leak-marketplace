@@ -17,7 +17,7 @@ const createSendToken = (user, statusCode, res) => {
 
     // Define cookie options
     const cookieOptions = {
-        expires: new Date(
+        expiresIn: new Date(
             Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
         ),
         httpOnly: true, // IMPORTANT: Browser JS cannot read this cookie (prevents XSS)
@@ -97,7 +97,7 @@ export const logout = (req, res) => {
     // You can't "delete" a cookie from the server, you replace it with bad data
     // and a very short expiration time (10 seconds).
     res.cookie('jwt', 'loggedout', {
-        expires: new Date(Date.now() + 10 * 1000),
+        expiresIn: new Date(Date.now() + 10 * 1000),
         httpOnly: true
     });
     res.status(200).json({ status: 'success' });
