@@ -16,7 +16,7 @@ const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const DownloadsPage = lazy(() => import('./pages/DownloadsPage'));
-const FAQPage = lazy(() => import('./pages/FAQPage'));
+const FAQPage = lazy(() => import('./pages/FaqPage'));
 const RulesPage = lazy(() => import('./pages/RulesPage')); // <--- 1. NEW IMPORT
 
 // Admin Pages

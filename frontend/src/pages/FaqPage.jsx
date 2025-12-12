@@ -158,4 +158,4 @@ const FAQPage = () => {
     );
 };
 
-export default FAQPage;
+export default FaqPage;
