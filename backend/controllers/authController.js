@@ -5,8 +5,6 @@ import User from '../models/userModel.js';
 // SENIOR PATTERN: Centralized Cookie/Token Logic
 // ------------------------------------------------------------------
 const signToken = (id) => {
-    console.log("🔍 JWT_SECRET:", process.env.JWT_SECRET);
-    console.log("🔍 JWT_EXPIRES_IN:", process.env.JWT_EXPIRES_IN);
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
     });
@@ -17,22 +15,23 @@ const createSendToken = (user, statusCode, res) => {
 
     // Define cookie options
     const cookieOptions = {
-        expiresIn: new Date(
+        // ✅ FIX: Cookies use 'expires' (Date object), NOT 'expiresIn'
+        expires: new Date(
             Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
         ),
-        httpOnly: true, // IMPORTANT: Browser JS cannot read this cookie (prevents XSS)
-        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in prod
+        httpOnly: true, // Browser JS cannot read this (prevents XSS)
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
         sameSite: 'strict' // CSRF protection
     };
 
     res.cookie('jwt', token, cookieOptions);
 
-    // Remove password from output (even though we selected false in model, better safe than sorry)
+    // Remove password from output
     user.password = undefined;
 
     res.status(statusCode).json({
         status: 'success',
-        token, // Optional: send token in JSON too if you want to use it for non-browser clients
+        token,
         data: {
             user
         }
@@ -44,18 +43,15 @@ const createSendToken = (user, statusCode, res) => {
 // ------------------------------------------------------------------
 export const signup = async (req, res, next) => {
     try {
-        // Whitelist the fields we accept. Do NOT use req.body directly to create a user.
-        // This prevents malicious users from manually setting their role to "admin".
         const newUser = await User.create({
             name: req.body.name,
             email: req.body.email,
             password: req.body.password,
-            // role: req.body.role -- NEVER allow this. Admins are made manually in DB.
+            // role: req.body.role -- Admin must be set manually in DB
         });
 
         createSendToken(newUser, 201, res);
     } catch (err) {
-        // Handle duplicate email error
         if (err.code === 11000) {
             return res.status(400).json({ status: 'fail', message: 'Email already exists' });
         }
@@ -76,14 +72,13 @@ export const login = async (req, res, next) => {
         }
 
         // 2. Check if user exists && password is correct
-        // We explicitly select('+password') because we set select:false in the model
         const user = await User.findOne({ email }).select('+password');
 
         if (!user || !(await user.correctPassword(password, user.password))) {
             return res.status(401).json({ status: 'fail', message: 'Incorrect email or password' });
         }
 
-        // 3. If everything ok, send token to client
+        // 3. Send token
         createSendToken(user, 200, res);
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
@@ -94,23 +89,19 @@ export const login = async (req, res, next) => {
 // 3. LOGOUT
 // ------------------------------------------------------------------
 export const logout = (req, res) => {
-    // You can't "delete" a cookie from the server, you replace it with bad data
-    // and a very short expiration time (10 seconds).
     res.cookie('jwt', 'loggedout', {
-        expiresIn: new Date(Date.now() + 10 * 1000),
+        expires: new Date(Date.now() + 10 * 1000),
         httpOnly: true
     });
     res.status(200).json({ status: 'success' });
 };
 
 // ------------------------------------------------------------------
-// 4. PROTECT MIDDLEWARE (The Gatekeeper)
+// 4. PROTECT MIDDLEWARE
 // ------------------------------------------------------------------
 export const protect = async (req, res, next) => {
     try {
         let token;
-
-        // Check if token exists in cookies
         if (req.cookies.jwt) {
             token = req.cookies.jwt;
         }
@@ -119,16 +110,13 @@ export const protect = async (req, res, next) => {
             return res.status(401).json({ status: 'fail', message: 'You are not logged in! Please log in to get access.' });
         }
 
-        // Verification
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Check if user still exists (in case they were deleted after token issue)
         const currentUser = await User.findById(decoded.id);
         if (!currentUser) {
             return res.status(401).json({ status: 'fail', message: 'The user belonging to this token no longer does exist.' });
         }
 
-        // GRANT ACCESS TO PROTECTED ROUTE
         req.user = currentUser;
         next();
 
@@ -138,11 +126,10 @@ export const protect = async (req, res, next) => {
 };
 
 // ------------------------------------------------------------------
-// 5. RESTRICT TO (Role Based Access Control)
+// 5. RESTRICT TO (Roles)
 // ------------------------------------------------------------------
 export const restrictTo = (...roles) => {
     return (req, res, next) => {
-        // roles ['admin', 'lead-guide']. role='user'
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({
                 status: 'fail',
@@ -152,12 +139,11 @@ export const restrictTo = (...roles) => {
         next();
     };
 };
+
 // ------------------------------------------------------------------
-// 5. GET ME (Persistence)
+// 6. GET ME
 // ------------------------------------------------------------------
-// This allows the user to stay logged in when refreshing the page
 export const getMe = (req, res, next) => {
-    // We just send back the user that the 'protect' middleware found
     res.status(200).json({
         status: 'success',
         data: {
