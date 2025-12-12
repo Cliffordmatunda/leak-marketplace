@@ -39,7 +39,7 @@ app.use(xss());
 // This connects the /api/v1/users path to your userRoutes file
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/products', productRouter);
-app.use('/api/v1/bookings', bookingRouter);
+app.use('/api/v1/orders', bookingRouter);
 
 // 7. ROOT ROUTE (Sanity Check)
 /*app.get('/', (req, res) => {
