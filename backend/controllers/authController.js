@@ -5,6 +5,10 @@ import User from '../models/userModel.js';
 // SENIOR PATTERN: Centralized Cookie/Token Logic
 // ------------------------------------------------------------------
 const signToken = (id) => {
+    console.log("🔍 DEBUG: Generating Token...");
+    console.log("   -> JWT_SECRET Exists?", !!process.env.JWT_SECRET);
+    console.log("   -> JWT_EXPIRES_IN Value:", process.env.JWT_EXPIRES_IN);
+    console.log("   -> JWT_EXPIRES_IN Type:", typeof process.env.JWT_EXPIRES_IN);
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
     });
