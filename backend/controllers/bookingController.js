@@ -115,3 +115,17 @@ export const getAllOrders = async (req, res) => {
         res.status(500).json({ status: 'error', message: err.message });
     }
 };
+export const createOrder = async (req, res, next) => {
+    // 1. Get data from the frontend
+    const { productId, paymentMethod, paymentAddressUsed } = req.body; // <--- Make sure it is destructured here!
+
+    // 2. Create the order
+    const newOrder = await Order.create({
+        user: req.user._id,
+        product: productId,
+        paymentMethod,
+        paymentAddressUsed: paymentAddressUsed || 'N/A' // <--- Add a fallback if it's sometimes missing
+    });
+
+    res.status(201).json({ status: 'success', data: { order: newOrder } });
+};

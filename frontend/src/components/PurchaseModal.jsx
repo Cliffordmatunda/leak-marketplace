@@ -22,6 +22,13 @@ const PurchaseModal = ({ product, onClose }) => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+    const handlePurchase = async () => {
+        await axios.post('/api/v1/orders', {
+            productId: product._id,
+            paymentMethod: 'crypto',
+            paymentAddressUsed: '0x123...abc' // <--- You MUST send this field now
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
