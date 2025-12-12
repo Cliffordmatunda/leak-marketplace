@@ -3,39 +3,44 @@ import User from '../models/userModel.js';
 import Product from '../models/productModel.js';
 
 // ------------------------------------------------------------------
-// 1. CREATE MANUAL ORDER (User Action)
+// 1. CREATE ORDER (Unified Function)
 // ------------------------------------------------------------------
-export const createManualOrder = async (req, res) => {
+export const createOrder = async (req, res) => {
     try {
-        const { productId, paymentMethod, transactionHash } = req.body;
+        const { productId, paymentMethod, transactionHash, paymentAddressUsed } = req.body;
 
         // 1. Get the Product
         const product = await Product.findById(productId);
         if (!product) return res.status(404).json({ message: 'Product not found' });
 
-        // 2. Determine which of YOUR addresses to show
-        // Ideally, store these in .env
-        let myWalletAddress = '';
-        if (paymentMethod === 'BTC') myWalletAddress = process.env.WALLET_BTC;
-        if (paymentMethod === 'USDT') myWalletAddress = process.env.WALLET_USDT;
+        // 2. Determine Address (Prefer what frontend sent, fallback to env, fallback to 'Unknown')
+        // This PREVENTS the "Path required" error if frontend fails.
+        let finalAddress = paymentAddressUsed;
 
-        // 3. Create the Order (Status: Pending)
+        if (!finalAddress) {
+            if (paymentMethod === 'BTC') finalAddress = process.env.WALLET_BTC;
+            else if (paymentMethod === 'USDT') finalAddress = process.env.WALLET_USDT;
+            else finalAddress = 'Manual/Unknown';
+        }
+
+        // 3. Create the Order
         const newOrder = await Order.create({
-            user: req.user.id,
-            product: product.id,
+            user: req.user._id, // Ensure your auth middleware sets req.user
+            product: product._id,
             priceUSD: product.price,
             paymentMethod,
-            paymentAddressUsed: myWalletAddress,
-            transactionHash: transactionHash || 'Not Provided Yet'
+            paymentAddressUsed: finalAddress, // ✅ This will now always have a value
+            transactionHash: transactionHash || 'Pending'
         });
 
         res.status(201).json({
             status: 'success',
-            message: 'Order placed! Waiting for manual admin approval.',
+            message: 'Order placed! Waiting for manual approval.',
             data: { order: newOrder }
         });
 
     } catch (err) {
+        console.error("Create Order Error:", err);
         res.status(400).json({ status: 'fail', message: err.message });
     }
 };
@@ -47,26 +52,20 @@ export const approveOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
 
-        // 1. Find Order
         const order = await Order.findById(orderId);
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
-        // 2. Update Status
         order.status = 'completed';
         await order.save();
 
-        // 3. Unlock Product for User
-        // We add the product ID to the user's "purchasedProducts" array
+        // Unlock Product for User
         await User.findByIdAndUpdate(order.user, {
             $addToSet: { purchasedProducts: order.product }
         });
 
-        // 4. (Optional) Trigger Email Notification here
-        // sendEmail(order.user.email, "Your download is ready!");
-
         res.status(200).json({
             status: 'success',
-            message: `Order ${orderId} approved. User can now download.`
+            message: `Order ${orderId} approved.`
         });
 
     } catch (err) {
@@ -79,11 +78,9 @@ export const approveOrder = async (req, res) => {
 // ------------------------------------------------------------------
 export const getMyOrders = async (req, res) => {
     try {
-        // Find bookings where user matches the logged-in ID
-        // .populate('product') fills in the Title, Price, etc. from the Product ID
-        const orders = await Order.find({ user: req.user.id })
+        const orders = await Order.find({ user: req.user._id })
             .populate('product')
-            .sort('-createdAt'); // Newest first
+            .sort('-createdAt');
 
         res.status(200).json({
             status: 'success',
@@ -94,13 +91,12 @@ export const getMyOrders = async (req, res) => {
         res.status(500).json({ status: 'error', message: err.message });
     }
 };
+
 // ------------------------------------------------------------------
 // 4. GET ALL ORDERS (Admin Only)
 // ------------------------------------------------------------------
 export const getAllOrders = async (req, res) => {
     try {
-        // Fetch ALL orders, newest first
-        // Populate user (name, email) and product (title, price)
         const orders = await Order.find()
             .populate('user', 'name email')
             .populate('product', 'title price')
@@ -114,18 +110,4 @@ export const getAllOrders = async (req, res) => {
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }
-};
-export const createOrder = async (req, res, next) => {
-    // 1. Get data from the frontend
-    const { productId, paymentMethod, paymentAddressUsed } = req.body; // <--- Make sure it is destructured here!
-
-    // 2. Create the order
-    const newOrder = await Order.create({
-        user: req.user._id,
-        product: productId,
-        paymentMethod,
-        paymentAddressUsed: paymentAddressUsed || 'N/A' // <--- Add a fallback if it's sometimes missing
-    });
-
-    res.status(201).json({ status: 'success', data: { order: newOrder } });
 };

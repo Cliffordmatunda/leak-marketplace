@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Copy, CheckCircle, RefreshCw, Wallet, CreditCard, FileText, ShieldCheck, Tag } from 'lucide-react';
 import api from '../api/axios';
 
+// Define wallets outside component to prevent re-creation on render
 const WALLETS = {
     BTC: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
     USDT: 'T9yD14Nj9j7xAB4dbGeiX9h8veHsn9sdfs'
@@ -22,29 +23,30 @@ const PurchaseModal = ({ product, onClose }) => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
-    const handlePurchase = async () => {
-        await axios.post('/api/v1/orders', {
-            productId: product._id,
-            paymentMethod: 'crypto',
-            paymentAddressUsed: '0x123...abc' // <--- You MUST send this field now
-        });
-    };
 
+    // ✅ SENIOR FIX: Single submission source
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            await api.post('/bookings', {
+            // We verify exactly which address was shown to the user
+            const currentWalletAddress = WALLETS[paymentMethod];
+
+            // Send to Backend
+            await api.post('/orders', { // Ensure your route matches this endpoint (e.g., /orders or /bookings)
                 productId: product._id,
                 paymentMethod,
-                transactionHash: txHash
+                transactionHash: txHash,
+                paymentAddressUsed: currentWalletAddress // <--- THIS WAS MISSING
             });
+
             setSuccess(true);
             setTimeout(() => navigate('/dashboard/downloads'), 2000);
         } catch (err) {
-            setError(err.response?.data?.message || 'Transaction failed.');
+            console.error("Purchase Error:", err);
+            setError(err.response?.data?.message || 'Transaction failed. Please try again.');
             setLoading(false);
         }
     };
@@ -65,12 +67,10 @@ const PurchaseModal = ({ product, onClose }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
 
-            {/* WIDER MODAL FOR SPLIT VIEW */}
             <div className="relative bg-[#0b0c15] border border-gray-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
 
-                {/* --- LEFT SIDE: ASSESSMENT (Description) --- */}
+                {/* --- LEFT SIDE: PRODUCT INFO --- */}
                 <div className="w-full md:w-1/2 bg-[#13151f] p-8 border-b md:border-b-0 md:border-r border-gray-800 overflow-y-auto">
-
                     <div className="flex items-center gap-2 mb-6">
                         <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs font-bold rounded border border-blue-800 uppercase">
                             {product.category}
@@ -82,14 +82,10 @@ const PurchaseModal = ({ product, onClose }) => {
 
                     <h2 className="text-2xl font-bold text-white mb-4 leading-tight">{product.title}</h2>
 
-                    {/* Full Description Area */}
                     <div className="prose prose-invert prose-sm mb-6 text-gray-300">
-                        <p className="whitespace-pre-wrap leading-relaxed">
-                            {product.description}
-                        </p>
+                        <p className="whitespace-pre-wrap leading-relaxed">{product.description}</p>
                     </div>
 
-                    {/* Tags */}
                     <div className="flex flex-wrap gap-2 mb-8">
                         {product.tags?.map(tag => (
                             <span key={tag} className="flex items-center gap-1 px-2 py-1 bg-[#0b0c15] border border-gray-700 rounded text-[10px] text-gray-400 uppercase">
@@ -98,7 +94,6 @@ const PurchaseModal = ({ product, onClose }) => {
                         ))}
                     </div>
 
-                    {/* Trust Badge */}
                     <div className="flex items-center gap-3 bg-green-900/10 border border-green-900/30 p-3 rounded-lg">
                         <ShieldCheck className="w-5 h-5 text-green-500" />
                         <div>
@@ -109,7 +104,7 @@ const PurchaseModal = ({ product, onClose }) => {
                 </div>
 
 
-                {/* --- RIGHT SIDE: PURCHASE (Checkout) --- */}
+                {/* --- RIGHT SIDE: CHECKOUT --- */}
                 <div className="w-full md:w-1/2 p-8 flex flex-col">
                     <div className="flex justify-between items-start mb-6">
                         <div>
@@ -119,13 +114,11 @@ const PurchaseModal = ({ product, onClose }) => {
                         <button onClick={onClose}><X className="text-gray-400 hover:text-white" /></button>
                     </div>
 
-                    {/* Price Box */}
                     <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/20 p-4 rounded-xl mb-6 flex justify-between items-center">
                         <span className="text-gray-300 font-medium">Total to Pay:</span>
                         <span className="text-2xl font-mono font-bold text-white">${product.price}</span>
                     </div>
 
-                    {/* Payment Method */}
                     <div className="grid grid-cols-2 gap-3 mb-6">
                         {['BTC', 'USDT'].map((method) => (
                             <button
@@ -141,7 +134,6 @@ const PurchaseModal = ({ product, onClose }) => {
                         ))}
                     </div>
 
-                    {/* Wallet Address */}
                     <div className="mb-6 relative group cursor-pointer" onClick={handleCopy}>
                         <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Send Exact Amount To:</label>
                         <div className="bg-[#13151f] border border-gray-700 rounded-lg p-3 flex justify-between items-center hover:border-blue-500 transition-colors">
@@ -153,7 +145,6 @@ const PurchaseModal = ({ product, onClose }) => {
                         {copied && <span className="absolute -bottom-5 right-0 text-[10px] text-green-500">Copied!</span>}
                     </div>
 
-                    {/* Hash Input */}
                     <form onSubmit={handleSubmit} className="mt-auto">
                         <input
                             type="text"
@@ -176,9 +167,7 @@ const PurchaseModal = ({ product, onClose }) => {
                             )}
                         </button>
                     </form>
-
                 </div>
-
             </div>
         </div>
     );
