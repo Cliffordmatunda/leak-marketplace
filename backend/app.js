@@ -42,9 +42,9 @@ app.use('/api/v1/products', productRouter);
 app.use('/api/v1/bookings', bookingRouter);
 
 // 7. ROOT ROUTE (Sanity Check)
-app.get('/', (req, res) => {
+/*app.get('/', (req, res) => {
     res.status(200).send('✅ API is Online');
-});
+});*/
 
 // 8. ERROR HANDLER
 app.use((err, req, res, next) => {
