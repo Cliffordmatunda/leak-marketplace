@@ -1,26 +1,28 @@
 import express from 'express';
 import {
-    createManualOrder,
+    createOrder,      // <--- CHANGED THIS (was createManualOrder)
     approveOrder,
     getMyOrders,
-    getAllOrders // <--- 1. Make sure this is imported!
+    getAllOrders
 } from '../controllers/bookingController.js';
+
 import { protect, restrictTo } from '../controllers/authController.js';
 
 const router = express.Router();
 
-// Protect all routes (User must be logged in)
+// 1. Protect all routes (User must be logged in)
 router.use(protect);
 
-// === USER ROUTES ===
-router.get('/my-orders', getMyOrders);     // Users see their own orders
-router.post('/', createManualOrder);       // Users create new orders
+// 2. Routes for Users
+router.route('/')
+    .get(getMyOrders)          // User sees their own history
+    .post(createOrder);        // <--- User creates a new order (Buying)
 
-// === ADMIN ROUTES ===
-// This is the route that was giving you the 404 error
-// It listens for GET /api/v1/bookings
-router.get('/', restrictTo('admin'), getAllOrders);
+// 3. Routes for Admins Only
+router.route('/all')
+    .get(restrictTo('admin'), getAllOrders); // Admin sees everyone's orders
 
-router.patch('/:orderId/approve', restrictTo('admin'), approveOrder);
+router.route('/:orderId/approve')
+    .patch(restrictTo('admin'), approveOrder); // Admin approves payment
 
 export default router;
