@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, User, Mail, RefreshCw, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, RefreshCw, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import api from '../api/axios';
 import AnimatedBackground from '../components/AnimatedBackground';
 
 const SignupPage = () => {
     const navigate = useNavigate();
 
-    // REFS (No re-renders while typing)
     const nameRef = useRef();
-    const emailRef = useRef();
+    const usernameRef = useRef(); // ✅ Changed from emailRef
     const passwordRef = useRef();
     const confirmRef = useRef();
     const captchaInputRef = useRef();
@@ -42,10 +41,9 @@ const SignupPage = () => {
             return;
         }
 
-        // Gather data from refs
         const formData = {
             name: nameRef.current.value,
-            email: emailRef.current.value,
+            username: usernameRef.current.value, // ✅ Changed
             password: passwordRef.current.value,
             passwordConfirm: confirmRef.current.value
         };
@@ -64,9 +62,7 @@ const SignupPage = () => {
     };
 
     return (
-        // ✅ FIX 1: 'min-h-screen' + 'overflow-y-auto' allows scrolling on mobile
         <div className="min-h-screen w-full bg-[#06070a] flex items-center justify-center relative overflow-y-auto px-4 py-12 text-gray-200">
-
             <AnimatedBackground />
 
             <div className="relative bg-[#0b0c15]/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-full max-w-5xl border border-gray-800">
@@ -76,8 +72,6 @@ const SignupPage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                    {/* --- LEFT SIDE: FORM --- */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
                             <div className="bg-red-900/20 text-red-400 p-3 rounded-lg text-xs font-bold border border-red-800/50 text-center">
@@ -89,27 +83,16 @@ const SignupPage = () => {
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
                             <div className="relative group">
                                 <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-600 group-focus-within:text-blue-500" />
-                                <input
-                                    ref={nameRef}
-                                    required
-                                    type="text"
-                                    className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none"
-                                    placeholder="John Doe"
-                                />
+                                <input ref={nameRef} required type="text" className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none" placeholder="John Doe" />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                            {/* ✅ CHANGED: Username Input */}
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Username</label>
                             <div className="relative group">
-                                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-600 group-focus-within:text-blue-500" />
-                                <input
-                                    ref={emailRef}
-                                    required
-                                    type="email"
-                                    className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none"
-                                    placeholder="name@company.com"
-                                />
+                                <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-600 group-focus-within:text-blue-500" />
+                                <input ref={usernameRef} required type="text" className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none" placeholder="Choose a username" />
                             </div>
                         </div>
 
@@ -118,126 +101,61 @@ const SignupPage = () => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
                                 <div className="relative group">
                                     <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-600 group-focus-within:text-blue-500" />
-                                    <input
-                                        ref={passwordRef}
-                                        required
-                                        type={showPassword ? "text" : "password"}
-                                        className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none"
-                                        placeholder="••••••"
-                                    />
+                                    <input ref={passwordRef} required type={showPassword ? "text" : "password"} className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none" placeholder="••••••" />
                                 </div>
                             </div>
-
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Confirm</label>
                                 <div className="relative group">
                                     <ShieldCheck className="absolute left-3 top-2.5 h-5 w-5 text-gray-600 group-focus-within:text-blue-500" />
-                                    <input
-                                        ref={confirmRef}
-                                        required
-                                        type={showPassword ? "text" : "password"}
-                                        className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none"
-                                        placeholder="••••••"
-                                    />
+                                    <input ref={confirmRef} required type={showPassword ? "text" : "password"} className="w-full pl-10 pr-4 py-2 bg-[#13151f] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none" placeholder="••••••" />
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                            >
-                                {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                {showPassword ? 'Hide Passwords' : 'Show Passwords'}
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />} {showPassword ? 'Hide Passwords' : 'Show Passwords'}
                             </button>
                         </div>
 
-                        {/* ✅ FIX 2: MOBILE CAPTCHA (Visible only on small screens) */}
+                        {/* Mobile Captcha & Link */}
                         <div className="md:hidden block">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Human Verification</label>
                             <div className="flex gap-2">
-                                <div
-                                    className="flex-1 bg-[#06070a] h-10 rounded border border-gray-700 flex items-center justify-center cursor-pointer relative"
-                                    onClick={generateCaptcha}
-                                >
+                                <div className="flex-1 bg-[#06070a] h-10 rounded border border-gray-700 flex items-center justify-center cursor-pointer relative" onClick={generateCaptcha}>
                                     <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/noise.png')]"></div>
-                                    <span className="font-mono font-bold text-gray-200 tracking-widest line-through decoration-blue-600/50 italic">
-                                        {captchaCode}
-                                    </span>
+                                    <span className="font-mono font-bold text-gray-200 tracking-widest line-through decoration-blue-600/50 italic">{captchaCode}</span>
                                 </div>
-                                <input
-                                    // Manually update the hidden Desktop Ref when typing on mobile
-                                    onChange={(e) => {
-                                        if (captchaInputRef.current) captchaInputRef.current.value = e.target.value;
-                                    }}
-                                    className="flex-1 px-3 bg-[#06070a] border border-gray-700 rounded text-white outline-none uppercase tracking-widest font-bold text-center"
-                                    placeholder="CODE"
-                                    maxLength={5}
-                                />
+                                <input onChange={(e) => { if (captchaInputRef.current) captchaInputRef.current.value = e.target.value; }} className="flex-1 px-3 bg-[#06070a] border border-gray-700 rounded text-white outline-none uppercase tracking-widest font-bold text-center" placeholder="CODE" maxLength={5} />
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 mt-4"
-                        >
-                            {isLoading ? <RefreshCw className="animate-spin h-5 w-5" /> : (
-                                <>Register Account <ArrowRight className="h-4 w-4" /></>
-                            )}
+                        <button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg flex items-center justify-center gap-2 mt-4">
+                            {isLoading ? <RefreshCw className="animate-spin h-5 w-5" /> : (<>Register Account <ArrowRight className="h-4 w-4" /></>)}
                         </button>
 
-                        {/* ✅ FIX 3: MOBILE LOGIN LINK */}
                         <div className="md:hidden mt-6 text-center">
-                            <p className="text-gray-400 text-sm">
-                                Already verified?{' '}
-                                <Link
-                                    to="/login"
-                                    className="text-blue-500 hover:text-blue-400 font-bold hover:underline transition-all"
-                                >
-                                    Log In Here
-                                </Link>
-                            </p>
+                            <p className="text-gray-400 text-sm">Already verified? <Link to="/login" className="text-blue-500 hover:text-blue-400 font-bold hover:underline transition-all">Log In Here</Link></p>
                         </div>
                     </form>
 
-                    {/* --- RIGHT SIDE: CAPTCHA (Hidden on mobile, Visible on Desktop) --- */}
+                    {/* Desktop Side */}
                     <div className="flex flex-col justify-center border-l border-gray-800 pl-8 md:block hidden">
                         <div className="bg-[#13151f] p-6 rounded-xl border border-gray-800 text-center">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Human Verification</label>
-
-                            <div
-                                className="relative bg-[#06070a] h-20 rounded-lg border border-gray-700 mb-4 flex items-center justify-center cursor-pointer group select-none"
-                                onClick={generateCaptcha}
-                            >
+                            <div className="relative bg-[#06070a] h-20 rounded-lg border border-gray-700 mb-4 flex items-center justify-center cursor-pointer group select-none" onClick={generateCaptcha}>
                                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/noise.png')]"></div>
-                                <span className="text-3xl font-mono font-black text-gray-200 tracking-[0.5em] line-through decoration-wavy decoration-blue-600/50 italic transform rotate-3">
-                                    {captchaCode}
-                                </span>
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100">
-                                    <RefreshCw className="w-4 h-4 text-gray-400" />
-                                </div>
+                                <span className="text-3xl font-mono font-black text-gray-200 tracking-[0.5em] line-through decoration-wavy decoration-blue-600/50 italic transform rotate-3">{captchaCode}</span>
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"><RefreshCw className="w-4 h-4 text-gray-400" /></div>
                             </div>
-
-                            <input
-                                ref={captchaInputRef}
-                                type="text"
-                                placeholder="ENTER CODE"
-                                className="w-full text-center py-2 bg-[#06070a] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none uppercase tracking-widest font-bold"
-                                maxLength={5}
-                            />
+                            <input ref={captchaInputRef} type="text" placeholder="ENTER CODE" className="w-full text-center py-2 bg-[#06070a] border border-gray-700 rounded-lg focus:border-blue-500 text-white outline-none uppercase tracking-widest font-bold" maxLength={5} />
                         </div>
-
                         <div className="mt-10 text-center">
                             <p className="text-gray-400 mb-4 text-sm">Already verified?</p>
-                            <Link to="/login" className="w-full border border-gray-600 text-gray-300 font-medium py-2.5 rounded-lg hover:bg-gray-800 hover:text-white transition-colors block">
-                                Log In Here
-                            </Link>
+                            <Link to="/login" className="w-full border border-gray-600 text-gray-300 font-medium py-2.5 rounded-lg hover:bg-gray-800 hover:text-white transition-colors block">Log In Here</Link>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

@@ -7,9 +7,9 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, 'A product must have a title'],
         trim: true,
-        maxlength: [100, 'A product title must have less than or equal to 100 characters']
+        maxlength: [100, 'Title must be under 100 chars']
     },
-    slug: String, // URL-friendly version of title
+    slug: String,
     description: {
         type: String,
         required: [true, 'A product must have a description']
@@ -22,73 +22,61 @@ const productSchema = new mongoose.Schema({
         min: [0, 'Price must be above 0']
     },
 
-    // Inventory (Added this missing field)
+    // Inventory System
     stock: {
         type: Number,
-        default: 1,
+        default: 1, // Default to 1, but Fullz logic will update this
         min: [0, 'Stock cannot be negative']
     },
 
-    // The Asset (Security Critical)
+    // The Asset (Hidden security field)
+    // We make this optional in Schema because Fullz uses text lines, not always files.
+    // However, the Controller validates logic based on type.
     s3Key: {
         type: String,
-        required: [true, 'A product must have a file source'],
-        select: false // HIDDEN. Never send this to the frontend publicly.
+        select: false
     },
-    fileSize: Number, // Useful to show "2.5 GB" on the UI
-    fileType: String, // "csv", "json", "pdf"
+    fileSize: Number,
+    fileType: String,
 
-    // Filtering & Discovery
+    // Filtering & Categories
     category: {
         type: String,
-        required: [true, 'A product must have a category'],
-        enum: {
-            // ⚠️ FIXED: Changed 'accounts' to 'Accounts' to match Frontend
-            values: ['Bank', 'Accounts', 'cc', 'fullz', 'cards', 'bins', 'Full Info'],
-            message: 'Category is either: Bank, Accounts, cc, fullz, cards, bins, Full Info'
-        }
+        required: [true, 'Category is required'],
+        // Matches your Frontend NavData
+        enum: ['Bank', 'Bank accounts', 'Accounts', 'cc', 'fullz', 'cards', 'bins', 'Full Info', 'Enroll', 'Lookup Services']
     },
-    tags: [String], // Array of strings for search keywords
+
+    // ✅ FEATURE FLAGS: This stores ["LOGIN+PASS", "BALANCE", "USA"] etc.
+    tags: [String],
 
     // Author
     owner: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',
-        required: [true, 'A product must belong to a user']
+        required: [true, 'Product must belong to a user']
     },
 
     // Stats
-    ratingsAverage: {
-        type: Number,
-        default: 4.5,
-        min: [1, 'Rating must be above 1.0'],
-        max: [5, 'Rating must be below 5.0']
-    },
-    ratingsQuantity: {
-        type: Number,
-        default: 0
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now()
-    }
+    ratingsAverage: { type: Number, default: 4.5 },
+    ratingsQuantity: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now() }
 }, {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
 });
 
-// MIDDLEWARE: Auto-create slug from title before saving
-// Example: "Chase Bank Log" -> "chase-bank-log"
+// Middleware: Auto-slug
 productSchema.pre('save', function (next) {
     this.slug = slugify(this.title, { lower: true });
     next();
 });
 
-// INDEXING: Critical for "Filter Features" performance
-// This makes searching by price and category instant, even with 1M products.
+// Indexing for Search Speed
 productSchema.index({ price: 1, ratingsAverage: -1 });
 productSchema.index({ slug: 1 });
 productSchema.index({ category: 1 });
+productSchema.index({ tags: 1 }); // Important for Badge filtering
 
 const Product = mongoose.model('Product', productSchema);
 

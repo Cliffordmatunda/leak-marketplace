@@ -3,40 +3,62 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
-import app from './app.js'; // Imports your Express app setup (middleware, routes)
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-dotenv.config({ path: './.env' });
+// ------------------------------------------------------------------
+// 1. CONFIG & PATHS
+// ------------------------------------------------------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// 1. Database Connection
-mongoose.connect(process.env.DATABASE)
+// Force load .env from the backend folder
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+import app from './app.js';
+
+// ------------------------------------------------------------------
+// 2. CONNECT TO DATABASE
+// ------------------------------------------------------------------
+// ✅ FIX: Changed from 'DATABASE' to 'MONGO_URI' to match your .env file
+const DB = process.env.MONGO_URI;
+
+console.log("🔍 CONNECTION DEBUG:");
+console.log("   -> Target URL:", DB || "❌ UNDEFINED (Check .env filename and location)");
+
+if (!DB) {
+    console.error("❌ ERROR: Connection string is missing.");
+    process.exit(1);
+}
+
+mongoose.connect(DB)
     .then(() => console.log('✅ DB Connection Successful!'))
-    .catch((err) => console.error('❌ DB Connection Error:', err));
+    .catch((err) => {
+        console.error('❌ DB Connection Error:', err.message);
+        console.error('   -> Check if MongoDB is running locally (mongod.exe)');
+    });
 
-// 2. Handle CORS (Allow Frontend to talk to Backend)
-// In production, they are same domain, but good safety for local dev
+// ------------------------------------------------------------------
+// 3. MIDDLEWARE & CORS
+// ------------------------------------------------------------------
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true
 }));
 
 // ------------------------------------------------------------------
-// SERVE FRONTEND (Production Only)
+// 4. SERVE FRONTEND (Production)
 // ------------------------------------------------------------------
-const __dirname = path.resolve();
-
 if (process.env.NODE_ENV === 'production') {
-    // A. Serve static files from the React build folder
-    // We go up one level (..) because 'backend' and 'frontend' are siblings
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-    // B. The "Catch-All" Route
-    // Any request that isn't an API call gets sent to index.html
     app.get('*', (req, res) => {
         res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
     });
 }
 
-// 3. Start Server
+// ------------------------------------------------------------------
+// 5. START SERVER
+// ------------------------------------------------------------------
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
     console.log(`✅ Server running on port ${port}...`);

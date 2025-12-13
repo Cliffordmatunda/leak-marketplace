@@ -1,153 +1,89 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { v4 as uuidv4 } from 'uuid'; // Make sure you ran: npm install uuid
 import Product from '../models/productModel.js';
-import s3 from '../utils/s3.js';
+import ProductItem from '../models/productItemModel.js';
+import APIFeatures from '../utils/apiFeatures.js';
 
 // ------------------------------------------------------------------
-// 1. GENERATE UPLOAD URL (Presigned URL)
-// ------------------------------------------------------------------
-export const getUploadUrl = async (req, res) => {
-    try {
-        if (!req.query.fileType) {
-            return res.status(400).json({ status: 'fail', message: 'Missing fileType query parameter' });
-        }
-
-        // Generate a random filename to prevent overwrites
-        const fileExtension = req.query.fileType.split('/')[1];
-        const key = `uploads/${req.user.id}/${uuidv4()}.${fileExtension}`;
-
-        const command = new PutObjectCommand({
-            Bucket: process.env.AWS_BUCKET_NAME,
-            Key: key,
-            ContentType: req.query.fileType
-        });
-
-        // Generate the URL. Client has 60 seconds to start the upload.
-        const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
-
-        res.status(200).json({
-            status: 'success',
-            uploadUrl, // Frontend uses this to PUT the file
-            key        // Frontend saves this to send to createProduct
-        });
-    } catch (err) {
-        console.error('S3 Presign Error:', err);
-        res.status(500).json({ status: 'error', message: 'Could not generate upload link' });
-    }
-};
-
-// ------------------------------------------------------------------
-// 2. CREATE PRODUCT (Metadata)
-// ------------------------------------------------------------------
-export const createProduct = async (req, res) => {
-    try {
-        const newProduct = await Product.create({
-            ...req.body, // Spreads title, price, description, category, stock, etc.
-            owner: req.user.id, // Securely assign the logged-in user
-            s3Key: req.body.s3Key // Link the file we just uploaded
-        });
-
-        res.status(201).json({
-            status: 'success',
-            data: {
-                product: newProduct
-            }
-        });
-    } catch (err) {
-        res.status(400).json({ status: 'fail', message: err.message });
-    }
-};
-
-// ------------------------------------------------------------------
-// 3. GET ALL PRODUCTS (With Search, Filter & Sort)
+// 1. GET ALL PRODUCTS
 // ------------------------------------------------------------------
 export const getAllProducts = async (req, res) => {
     try {
-        // 1. EXTRACT SPECIAL PARAMS
-        const { search, minPrice, maxPrice, category, type, sort } = req.query;
+        const features = new APIFeatures(Product.find(), req.query)
+            .filter()
+            .sort()
+            .limitFields()
+            .paginate();
 
-        // 2. BUILD THE SEARCH FILTER
-        let queryObj = {};
+        const products = await features.query;
 
-        // A. "Smart Search" (Checks Title AND Tags)
-        if (search) {
-            queryObj.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { tags: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        // B. Category (Case Insensitive Matching)
-        if (category) {
-            queryObj.category = { $regex: new RegExp(`^${category}$`, 'i') };
-        }
-
-        // C. Sub-Category (Matches tags)
-        if (type) {
-            queryObj.tags = { $in: [type] };
-        }
-
-        // D. Price Logic
-        if (minPrice || maxPrice) {
-            queryObj.price = {};
-            if (minPrice) queryObj.price.$gte = Number(minPrice);
-            if (maxPrice) queryObj.price.$lte = Number(maxPrice);
-        }
-
-        // 3. EXECUTE QUERY
-        let query = Product.find(queryObj);
-
-        // Sorting
-        if (sort) {
-            const sortBy = sort.split(',').join(' ');
-            query = query.sort(sortBy);
-        } else {
-            query = query.sort('-createdAt'); // Default: Newest first
-        }
-
-        const products = await query;
-
-        // 4. SEND RESPONSE
         res.status(200).json({
             status: 'success',
             results: products.length,
             data: { products }
         });
-
     } catch (err) {
-        res.status(500).json({ status: 'error', message: err.message });
+        res.status(404).json({ status: 'fail', message: err.message });
     }
 };
 
 // ------------------------------------------------------------------
-// 4. GET SINGLE PRODUCT
+// 2. GET SINGLE PRODUCT
 // ------------------------------------------------------------------
 export const getProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-
         if (!product) {
-            return res.status(404).json({ status: 'fail', message: 'No product found with that ID' });
+            return res.status(404).json({ status: 'fail', message: 'Product not found' });
         }
-
         res.status(200).json({
             status: 'success',
             data: { product }
         });
     } catch (err) {
-        res.status(404).json({ status: 'fail', message: 'Invalid ID' });
+        res.status(404).json({ status: 'fail', message: err.message });
     }
 };
 
 // ------------------------------------------------------------------
-// 5. UPDATE PRODUCT (Admin/Owner)
+// 3. CREATE PRODUCT (Admin)
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// 3. CREATE PRODUCT (Admin)
+// ------------------------------------------------------------------
+export const createProduct = async (req, res) => {
+    try {
+        // 1. AUTO-ASSIGN OWNER (The Admin who is logged in)
+        // The 'protect' middleware adds 'req.user', so we use that ID.
+        if (!req.body.owner) {
+            req.body.owner = req.user._id;
+        }
+
+        // 2. HANDLE S3 KEY (File Source)
+        // If it's "Fullz" (Text Data), we don't have a file.
+        // We set it to 'DB_TEXT' so the validator doesn't crash.
+        if (!req.body.s3Key) {
+            req.body.s3Key = 'DB_TEXT';
+        }
+
+        // 3. Create
+        const newProduct = await Product.create(req.body);
+
+        res.status(201).json({
+            status: 'success',
+            data: { product: newProduct }
+        });
+    } catch (err) {
+        console.error("Create Product Error:", err);
+        res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+// ------------------------------------------------------------------
+// 4. UPDATE PRODUCT (Admin) - RESTORED ✅
 // ------------------------------------------------------------------
 export const updateProduct = async (req, res) => {
     try {
         const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-            new: true, // Return the new updated document
-            runValidators: true // Ensure price is number, etc.
+            new: true,
+            runValidators: true
         });
 
         if (!product) {
@@ -159,12 +95,12 @@ export const updateProduct = async (req, res) => {
             data: { product }
         });
     } catch (err) {
-        res.status(400).json({ status: 'fail', message: err.message });
+        res.status(404).json({ status: 'fail', message: err.message });
     }
 };
 
 // ------------------------------------------------------------------
-// 6. DELETE PRODUCT (Admin/Owner)
+// 5. DELETE PRODUCT (Admin) - RESTORED ✅
 // ------------------------------------------------------------------
 export const deleteProduct = async (req, res) => {
     try {
@@ -174,11 +110,93 @@ export const deleteProduct = async (req, res) => {
             return res.status(404).json({ status: 'fail', message: 'No product found with that ID' });
         }
 
-        // NOTE: In a real production app, we would also delete the file from S3 here.
-        // For now, removing it from the DB is sufficient.
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (err) {
+        res.status(404).json({ status: 'fail', message: err.message });
+    }
+};
 
-        res.status(204).json({ status: 'success', data: null });
+// ------------------------------------------------------------------
+// 6. ADD FULLZ DATA (Inventory Logic)
+// ------------------------------------------------------------------
+export const addFullz = async (req, res) => {
+    try {
+        const { productId, state, dataLines } = req.body;
+
+        if (!productId || !state || !dataLines) {
+            return res.status(400).json({ message: 'Missing required fields: productId, state, dataLines' });
+        }
+
+        // 1. Prepare items
+        const itemsToInsert = dataLines.map(line => ({
+            product: productId,
+            state: state.toUpperCase(),
+            content: line,
+            isSold: false
+        }));
+
+        // 2. Bulk Insert
+        await ProductItem.insertMany(itemsToInsert);
+
+        // 3. Recalculate Total Stock
+        const newTotalStock = await ProductItem.countDocuments({
+            product: productId,
+            isSold: false
+        });
+
+        await Product.findByIdAndUpdate(productId, {
+            stockCount: newTotalStock
+        });
+
+        res.status(201).json({
+            status: 'success',
+            message: `Successfully added ${dataLines.length} items to ${state}`,
+            data: { currentStock: newTotalStock }
+        });
+
     } catch (err) {
         res.status(400).json({ status: 'fail', message: err.message });
+    }
+};
+
+// ------------------------------------------------------------------
+// 7. GET FULLZ STATS (For State Grid)
+// ------------------------------------------------------------------
+export const getFullzStats = async (req, res) => {
+    try {
+        const { productId } = req.params;
+
+        const stats = await ProductItem.aggregate([
+            {
+                // Match this product ID (converted to ObjectId) & Unsold items
+                $match: {
+                    $expr: { $eq: ['$product', { $toObjectId: productId }] },
+                    isSold: false
+                }
+            },
+            {
+                $group: {
+                    _id: "$state",
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const stateMap = {};
+        stats.forEach(item => {
+            stateMap[item._id] = item.count;
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: { stats: stateMap }
+        });
+
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: err.message });
     }
 };

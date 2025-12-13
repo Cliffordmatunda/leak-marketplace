@@ -6,12 +6,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please tell us your name!']
     },
-    email: {
+    // ✅ CHANGED: Email -> Username
+    username: {
         type: String,
-        required: [true, 'Please provide your email'],
+        required: [true, 'Please provide a unique username'],
         unique: true,
-        lowercase: true
+        lowercase: true,
+        trim: true,
+        minlength: [3, 'Username must be at least 3 characters']
     },
+    // Removed 'email' field entirely as requested
     photo: String,
     password: {
         type: String,
@@ -38,12 +42,8 @@ const userSchema = new mongoose.Schema({
 
 // Encrypt password before saving
 userSchema.pre('save', async function (next) {
-    // Only run this function if password was actually modified
     if (!this.isModified('password')) return next();
-
-    // Hash the password with cost of 12
     this.password = await bcrypt.hash(this.password, 12);
-
     next();
 });
 
