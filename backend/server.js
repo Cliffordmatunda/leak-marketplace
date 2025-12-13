@@ -21,7 +21,7 @@ import app from './app.js';
 // 2. CONNECT TO DATABASE
 // ------------------------------------------------------------------
 // ✅ FIX: Changed from 'DATABASE' to 'MONGO_URI' to match your .env file
-const DB = process.env.MONGO_URI;
+const DB = process.env.DATABASE;
 
 console.log("🔍 CONNECTION DEBUG:");
 console.log("   -> Target URL:", DB || "❌ UNDEFINED (Check .env filename and location)");
