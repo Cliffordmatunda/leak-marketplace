@@ -64,7 +64,8 @@ const SignupPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#06070a] flex items-center justify-center relative overflow-hidden text-gray-200">
+        // ✅ FIX 1: 'min-h-screen' + 'overflow-y-auto' allows scrolling on mobile
+        <div className="min-h-screen w-full bg-[#06070a] flex items-center justify-center relative overflow-y-auto px-4 py-12 text-gray-200">
 
             <AnimatedBackground />
 
@@ -76,6 +77,7 @@ const SignupPage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
+                    {/* --- LEFT SIDE: FORM --- */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
                             <div className="bg-red-900/20 text-red-400 p-3 rounded-lg text-xs font-bold border border-red-800/50 text-center">
@@ -152,6 +154,31 @@ const SignupPage = () => {
                             </button>
                         </div>
 
+                        {/* ✅ FIX 2: MOBILE CAPTCHA (Visible only on small screens) */}
+                        <div className="md:hidden block">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Human Verification</label>
+                            <div className="flex gap-2">
+                                <div
+                                    className="flex-1 bg-[#06070a] h-10 rounded border border-gray-700 flex items-center justify-center cursor-pointer relative"
+                                    onClick={generateCaptcha}
+                                >
+                                    <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/noise.png')]"></div>
+                                    <span className="font-mono font-bold text-gray-200 tracking-widest line-through decoration-blue-600/50 italic">
+                                        {captchaCode}
+                                    </span>
+                                </div>
+                                <input
+                                    // Manually update the hidden Desktop Ref when typing on mobile
+                                    onChange={(e) => {
+                                        if (captchaInputRef.current) captchaInputRef.current.value = e.target.value;
+                                    }}
+                                    className="flex-1 px-3 bg-[#06070a] border border-gray-700 rounded text-white outline-none uppercase tracking-widest font-bold text-center"
+                                    placeholder="CODE"
+                                    maxLength={5}
+                                />
+                            </div>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={isLoading}
@@ -161,8 +188,22 @@ const SignupPage = () => {
                                 <>Register Account <ArrowRight className="h-4 w-4" /></>
                             )}
                         </button>
+
+                        {/* ✅ FIX 3: MOBILE LOGIN LINK */}
+                        <div className="md:hidden mt-6 text-center">
+                            <p className="text-gray-400 text-sm">
+                                Already verified?{' '}
+                                <Link
+                                    to="/login"
+                                    className="text-blue-500 hover:text-blue-400 font-bold hover:underline transition-all"
+                                >
+                                    Log In Here
+                                </Link>
+                            </p>
+                        </div>
                     </form>
 
+                    {/* --- RIGHT SIDE: CAPTCHA (Hidden on mobile, Visible on Desktop) --- */}
                     <div className="flex flex-col justify-center border-l border-gray-800 pl-8 md:block hidden">
                         <div className="bg-[#13151f] p-6 rounded-xl border border-gray-800 text-center">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Human Verification</label>
