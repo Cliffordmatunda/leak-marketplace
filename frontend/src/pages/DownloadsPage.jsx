@@ -7,7 +7,7 @@ const DownloadsPage = () => {
     const { data: orders, isLoading, error } = useQuery({
         queryKey: ['my-orders'],
         queryFn: async () => {
-            const res = await api.get('/bookings/my-orders');
+            const res = await api.get('/orders/my-orders');
             return res.data.data.orders;
         }
     });
