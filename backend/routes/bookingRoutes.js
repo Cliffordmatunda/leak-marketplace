@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-    createOrder,      // <--- CHANGED THIS (was createManualOrder)
+    createOrder,
     approveOrder,
     getMyOrders,
     getAllOrders
@@ -10,19 +10,17 @@ import { protect, restrictTo } from '../controllers/authController.js';
 
 const router = express.Router();
 
-// 1. Protect all routes (User must be logged in)
 router.use(protect);
 
-// 2. Routes for Users
+// ✅ MATCHES: /api/v1/orders
 router.route('/')
-    .get(getMyOrders)          // User sees their own history
-    .post(createOrder);        // <--- User creates a new order (Buying)
+    .get(getMyOrders)       // <--- Frontend calls this
+    .post(createOrder);     // <--- Frontend PurchaseModal calls this
 
-// 3. Routes for Admins Only
 router.route('/all')
-    .get(restrictTo('admin'), getAllOrders); // Admin sees everyone's orders
+    .get(restrictTo('admin'), getAllOrders);
 
 router.route('/:orderId/approve')
-    .patch(restrictTo('admin'), approveOrder); // Admin approves payment
+    .patch(restrictTo('admin'), approveOrder);
 
 export default router;

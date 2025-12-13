@@ -7,18 +7,16 @@ const DownloadsPage = () => {
     const { data: orders, isLoading, error } = useQuery({
         queryKey: ['my-orders'],
         queryFn: async () => {
-            const res = await api.get('/orders/my-orders');
+            // ✅ FIX: Changed '/orders/my-orders' to '/orders' to match backend route
+            const res = await api.get('/orders');
             return res.data.data.orders;
         }
     });
 
     // 2. Handle Download Click
     const handleDownload = (product) => {
-        // Logic: In a real app, this would call an endpoint to get a signed S3 URL.
-        // For now, we simulate the start of a download.
-        alert(`Starting secure download for: ${product.title}\nSource: ${product.s3Key}`);
-
-        // Example of real logic:
+        // In production, this would fetch a secure S3 URL
+        alert(`Starting secure download for: ${product.title}`);
         // window.open(product.s3Key, '_blank'); 
     };
 
@@ -29,14 +27,15 @@ const DownloadsPage = () => {
     );
 
     if (error) return (
-        <div className="text-red-400 bg-red-900/20 p-4 rounded-xl border border-red-800">
-            Failed to load your orders.
+        <div className="text-red-400 bg-red-900/20 p-4 rounded-xl border border-red-800 text-center">
+            <AlertCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
+            <p>Failed to load your orders.</p>
+            <p className="text-xs text-gray-500 mt-1">{error.response?.data?.message || error.message}</p>
         </div>
     );
 
     return (
         <div className="max-w-6xl mx-auto">
-
             {/* Header */}
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -55,16 +54,14 @@ const DownloadsPage = () => {
                         <p className="text-gray-400">You haven't purchased anything yet.</p>
                     </div>
                 ) : (
-                    orders.map((order) => (
+                    orders?.map((order) => (
                         <div
                             key={order._id}
                             className="bg-[#13151f] border border-gray-800 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-gray-600 transition-colors"
                         >
-
                             {/* Left: Icon & Info */}
                             <div className="flex items-start gap-4">
-                                <div className={`p-3 rounded-lg ${order.status === 'completed' ? 'bg-blue-600/20 text-blue-400' : 'bg-yellow-600/20 text-yellow-400'
-                                    }`}>
+                                <div className={`p-3 rounded-lg ${order.status === 'completed' ? 'bg-blue-600/20 text-blue-400' : 'bg-yellow-600/20 text-yellow-400'}`}>
                                     <FileText className="w-6 h-6" />
                                 </div>
 
@@ -82,8 +79,6 @@ const DownloadsPage = () => {
 
                             {/* Right: Status & Action */}
                             <div className="flex items-center gap-4 self-end md:self-auto">
-
-                                {/* STATUS INDICATOR */}
                                 {order.status === 'completed' ? (
                                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-900/20 text-green-400 border border-green-800/50 text-xs font-bold uppercase tracking-wider">
                                         <CheckCircle className="w-3 h-3" /> Ready
@@ -94,29 +89,22 @@ const DownloadsPage = () => {
                                     </div>
                                 )}
 
-                                {/* DOWNLOAD BUTTON */}
                                 <button
                                     onClick={() => handleDownload(order.product)}
                                     disabled={order.status !== 'completed'}
-                                    className={`
-                    flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all
-                    ${order.status === 'completed'
-                                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-                                            : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
-                                        }
-                  `}
+                                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${order.status === 'completed'
+                                        ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+                                        : 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
+                                        }`}
                                 >
                                     <Download className="w-4 h-4" />
-                                    {order.status === 'completed' ? 'Download File' : 'Processing'}
+                                    {order.status === 'completed' ? 'Download' : 'Processing'}
                                 </button>
-
                             </div>
-
                         </div>
                     ))
                 )}
             </div>
-
         </div>
     );
 };
