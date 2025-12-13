@@ -16,8 +16,8 @@ const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const DownloadsPage = lazy(() => import('./pages/DownloadsPage'));
-const FAQPage = lazy(() => import('./pages/FaqPage'));
-const RulesPage = lazy(() => import('./pages/RulesPage')); // <--- 1. NEW IMPORT
+const FaqPage = lazy(() => import('./pages/FaqPage'));
+const RulesPage = lazy(() => import('./pages/RulesPage'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -65,8 +65,8 @@ function App() {
             <Route path="downloads" element={<DownloadsPage />} />
 
             {/* Help Center Routes */}
-            <Route path="faq" element={<FAQPage />} />
-            <Route path="rules" element={<RulesPage />} /> {/* <--- 2. NEW ROUTE */}
+            <Route path="faq" element={<FaqPage />} />
+            <Route path="rules" element={<RulesPage />} />
 
             {/* Dynamic Categories (Must be below specific paths like 'rules' or 'faq') */}
             {/* Handles /dashboard/accounts, /dashboard/banks, etc. */}
