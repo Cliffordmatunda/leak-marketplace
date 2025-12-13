@@ -38,3 +38,36 @@
     transform: translate(0px, 0px) scale(1);
   }
 }
+
+/* --- RESPONSIVE RECAPTCHA FIX --- */
+/* This forces the fixed-width captcha to shrink on small screens */
+@media screen and (max-height: 575px) {
+
+  #rc-imageselect,
+  .g-recaptcha {
+    transform: scale(0.77);
+    -webkit-transform: scale(0.77);
+    transform-origin: 0 0;
+    -webkit-transform-origin: 0 0;
+  }
+}
+
+/* For standard mobile widths */
+@media screen and (max-width: 400px) {
+  .g-recaptcha {
+    transform: scale(0.85);
+    /* Shrinks it to 85% size */
+    -webkit-transform: scale(0.85);
+    transform-origin: 0 0;
+    /* Keeps it aligned to the left */
+    -webkit-transform-origin: 0 0;
+    margin-bottom: 15px;
+    /* Adds space below so the button isn't covered */
+  }
+
+  /* Ensure the container doesn't clip it */
+  .g-recaptcha>div {
+    width: 100% !important;
+    overflow: hidden;
+  }
+}
